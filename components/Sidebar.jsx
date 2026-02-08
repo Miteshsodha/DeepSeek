@@ -8,8 +8,8 @@ import  ChatLabel  from "@/components/ChatLabel"
 const sidebar = ({ expand, setExpand }) => {
 
 
-    const {openSignIn} = useClerk()
-    const {user} = useAppContext()
+    const {openSignIn} = useClerk();
+    const {user} = useAppContext();
 
     const [openMenu, setOpenMenu] = useState({id: 0, open: false})
  

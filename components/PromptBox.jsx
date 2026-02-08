@@ -12,7 +12,7 @@ const PromptBox = ({ setIsLoading, isLoading }) => {
   const [prompt, setPrompt] = useState('');
   const { user, chats, setChats, selectedChat, setSelectedChat } = useAppContext();
 
-  const handleKeyDown = () => {
+  const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendPrompt(e);
@@ -40,7 +40,7 @@ const PromptBox = ({ setIsLoading, isLoading }) => {
 
       // saving user prompt in chats array
 
-      setChats((prevChats) => prevChats.map((chat) => ChatCompletionStreamingRunner._id === selectedChat._id ? { ...chat, messages: [...chat.messages, userPrompt] } : chat))
+      setChats((prevChats) => prevChats.map((chat) => chat._id === selectedChat._id ? { ...chat, messages: [...chat.messages, userPrompt] } : chat))
 
       // saving user chat in selected chat
 
@@ -55,7 +55,7 @@ const PromptBox = ({ setIsLoading, isLoading }) => {
       })
 
       if (data.success) {
-        setChats((prevChats) => prevChats.map(() => chat._id === selectedChat._id ? { ...chat, messages: [...chat.messages, data.data] } : chat))
+        setChats((prevChats) => prevChats.map((chat) => chat._id === selectedChat._id ? { ...chat, messages: [...chat.messages, data.data] } : chat))
 
         const message = data.data.content;
         const messageTokens = message.split(" ");
@@ -73,7 +73,7 @@ const PromptBox = ({ setIsLoading, isLoading }) => {
         for (let i = 0; i < messageTokens.length; i++) {
           setTimeout(() => {
             assistantMessage.content = messageTokens.slice(0, i + 1).join(" ");
-            selectedChat((prev) => {
+            setSelectedChat((prev) => {
               const updatedMessages = [
                 ...prev.messages.slice(0, -1),
                 assistantMessage
