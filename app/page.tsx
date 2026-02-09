@@ -25,11 +25,19 @@ export default function Home() {
     }
   }, [selectedChat]);
 
+  // Scroll to bottom function
+  const yourScrollFunction = () => {
+    if (containerRef.current) {
+      containerRef.current.scrollTo({
+        top: containerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   // Auto scroll to bottom when messages update
   useLayoutEffect(() => {
-    if (containerRef.current !== null) {
-      containerRef.current.scrollTo = containerRef.current.scrollHeight;
-    }
+    yourScrollFunction();
   }, [messages, isLoading]);
 
   return (
