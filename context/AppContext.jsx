@@ -47,8 +47,10 @@ export const AppContextProvider = ({ children }) => {
                 }
             })
 
+            console.log("hear is that",data.data);
             if (data.success) {
                 console.log(data.data);
+                console.log("hear is that",data.data);
                 setChats(data.data)
 
                 // if the user has no chats then create one
