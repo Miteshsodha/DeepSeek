@@ -28,7 +28,7 @@ export default function Home() {
   // Auto scroll to bottom when messages update
   useLayoutEffect(() => {
     if (containerRef.current !== null) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+      containerRef.current.scrollTo = containerRef.current.scrollHeight;
     }
   }, [messages, isLoading]);
 
