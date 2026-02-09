@@ -48,6 +48,6 @@ export async function POST(req) {
     }
 
 
-    return NextRequest.json({message: "Event Received"})
+    return NextResponse.json({message: "Event Received"})
 
 }
