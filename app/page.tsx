@@ -29,8 +29,8 @@ export default function Home() {
   useLayoutEffect(() => {
     if (!containerRef.current) return;
 
-    containerRef.current.scrollTop =
-      containerRef.current.scrollHeight;
+    containerRef.current!.scrollTop =
+      containerRef.current!.scrollHeight;
   }, [messages, isLoading]);
 
   return (
@@ -107,18 +107,10 @@ export default function Home() {
               </>
             )}
           </div>
-
-          {/* Prompt Input */}
-          <PromptBox
-            isLoading={isLoading}
-            setIsLoading={setIsLoading}
-          />
-
-          <p className="text-xs absolute bottom-1 text-gray-500">
-            AI-generated, for reference only
-          </p>
         </div>
       </div>
+
+      <PromptBox setMessages={setMessages} setIsLoading={setIsLoading} />
     </div>
   );
 }
