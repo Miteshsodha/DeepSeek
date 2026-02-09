@@ -8,9 +8,14 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Message from "@/components/Message";
 import { useAppContext } from "@/context/AppContext";
 
+interface ChatMessage {
+  role: string;
+  content: string;
+}
+
 export default function Home() {
   const [expand, setExpand] = useState(false);
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const { selectedChat } = useAppContext();
