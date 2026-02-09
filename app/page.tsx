@@ -14,7 +14,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
 
   const { selectedChat } = useAppContext();
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Update messages when chat changes
   useEffect(() => {
@@ -27,10 +27,9 @@ export default function Home() {
 
   // Auto scroll to bottom when messages update
   useLayoutEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    container.scrollTop = container.scrollHeight;
+    if (containerRef.current !== null) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
   }, [messages, isLoading]);
 
   return (
