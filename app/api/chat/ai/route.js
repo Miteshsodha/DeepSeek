@@ -1,4 +1,4 @@
-export const maxDurationn= 60;
+export const maxDuration= 60;
 import OpenAI from "openai";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
