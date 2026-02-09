@@ -14,7 +14,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
 
   const { selectedChat } = useAppContext();
-  const containerRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Update messages when chat changes
   useEffect(() => {
