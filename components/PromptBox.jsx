@@ -8,7 +8,6 @@ import axios from 'axios';
 
 const PromptBox = ({ setIsLoading, isLoading }) => {
 
-
   const [prompt, setPrompt] = useState('');
   const { user, chats, setChats, selectedChat, setSelectedChat } = useAppContext();
 
@@ -20,7 +19,6 @@ const PromptBox = ({ setIsLoading, isLoading }) => {
   }
 
   const sendPrompt = async (e) => {
-
     const promptCopy = prompt;
 
     try {
@@ -28,14 +26,15 @@ const PromptBox = ({ setIsLoading, isLoading }) => {
 
       if (!user) return toast.error('Login to send message');
       if (isLoading) return toast.error("Wait for the previous prompt response");
+      if (!promptCopy.trim()) return toast.error("Please enter a message");
 
       setIsLoading(true)
       setPrompt("")
 
       const userPrompt = {
         role: "user",
-        content: prompt,
-        timestemp: Date.now(),
+        content: promptCopy,
+        timestamp: Date.now(),
       }
 
       // saving user prompt in chats array
@@ -49,10 +48,14 @@ const PromptBox = ({ setIsLoading, isLoading }) => {
         messages: [...prev.messages, userPrompt]
       }))
 
+      console.log("Sending prompt to API:", promptCopy);
+
       const { data } = await axios.post('/api/chat/ai', {
         chatId: selectedChat._id,
-        prompt
+        prompt: promptCopy
       })
+
+      console.log("API Response:", data);
 
       if (data.success) {
         setChats((prevChats) => prevChats.map((chat) => chat._id === selectedChat._id ? { ...chat, messages: [...chat.messages, data.data] } : chat))
@@ -62,7 +65,7 @@ const PromptBox = ({ setIsLoading, isLoading }) => {
         let assistantMessage = {
           role: 'assistant',
           content: '',
-          timestemp: Date.now(),
+          timestamp: Date.now(),
         }
 
         setSelectedChat((prev) => ({
@@ -90,6 +93,7 @@ const PromptBox = ({ setIsLoading, isLoading }) => {
       }
 
     } catch (error) {
+      console.error("Error sending message:", error);
       toast.error(error.message);
       setPrompt(promptCopy);
     } finally {
@@ -98,8 +102,8 @@ const PromptBox = ({ setIsLoading, isLoading }) => {
   }
 
   return (
-    <form onSubmit={sendPrompt} className={`w-full ${selectedChat.messages.length > 0 ? 'max-w-3xl' : 'max-w-2xl'} bg-[#404045] p-4 rounded-3xl mt-4 transition-all`}>
-      <textarea onKeyDown={handleKeyDown} rows={2} placeholder='Message DeepSeek' required className={`outline-none w-full resize-none overflow-hidden break-words bg-transparent`} onChange={(e) => setPrompt(e.target.value)} value={prompt} />
+    <form onSubmit={sendPrompt} className={`w-full ${selectedChat?.messages?.length > 0 ? 'max-w-3xl' : 'max-w-2xl'} bg-[#404045] p-4 rounded-3xl mt-4 transition-all`}>
+      <textarea onKeyDown={handleKeyDown} rows={2} placeholder='Message DeepSeek' required className={`outline-none w-full resize-none overflow-hidden break-words bg-transparent text-white`} onChange={(e) => setPrompt(e.target.value)} value={prompt} />
       <div className={`flex items-center justify-between text-sm`} >
         <div className={`flex items-center gap-2`}>
           <p className='flex items-center gap-2 text-xs border border-gray-300/40 px-2 py-1 rounded-full cursor-pointer hover:bg-gray-500/20 transition'>
@@ -113,12 +117,10 @@ const PromptBox = ({ setIsLoading, isLoading }) => {
         </div>
 
         <div className={`flex items-center gap-2`} >
-          <Image className={`w-4 cursor-pointer`} src={assets.pin_icon} alt='' />
-          <button className={`${prompt ? 'bg-primary' : 'bg-[#71717a]'} rounded-full p-2 cursor-pointer`}>
-            <Image className={`w-3.5 aspect-square`} src={prompt ? assets.arrow_icon : assets.arrow_icon_dull} alt='' />
+          <button type='submit' className='text-white/60 hover:text-white transition'>
+            <Image src={assets.arrow_icon} alt='' className='w-5' />
           </button>
         </div>
-
       </div>
     </form>
   )
