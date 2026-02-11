@@ -2,8 +2,7 @@ export const maxDuration= 60;
 import OpenAI from "openai";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { Chat } from "openai/resources/index.mjs";
-import { timeStamp } from "console";
+import Chat from "@/models/Chat";  // ← FIX: Import your Chat model, not from openai
 import connectDB from "@/config/db";
 
 // Initialize OpenAI client with DeepSeek API key and base URL
@@ -16,7 +15,7 @@ export async function POST(req) {
     try {
         const { userId } = getAuth(req)
 
-        // Extrect chatId and prompt from the request body
+        // Extract chatId and prompt from the request body
         const { chatId, prompt } = await req.json();
 
         if (!userId) {
@@ -26,12 +25,11 @@ export async function POST(req) {
             });
         }
 
-        //Find the chat document in the database based on userId and chatId
-
+        // Find the chat document in the database based on userId and chatId
         await connectDB();
         const data = await Chat.findOne({ userId, _id: chatId })
 
-        //Create a user message object
+        // Create a user message object
         const userPrompt = {
             role: "user",
             content: prompt,
@@ -40,8 +38,7 @@ export async function POST(req) {
 
         data.messages.push(userPrompt);
 
-        // Call the DeepSeek api ti get a chat completion
-
+        // Call the DeepSeek API to get a chat completion
         const completion = await openai.chat.completions.create({
             messages: [{ role: "user", content: prompt }],
             model: "deepseek-chat",
@@ -51,12 +48,11 @@ export async function POST(req) {
         const message = completion.choices[0].message;
         message.timestamp = Date.now()
         data.messages.push(message);
-        data.save();
+        await data.save();
 
         return NextResponse.json({success: true, data: message})
 
     } catch (error) {
-
         return NextResponse.json({success: false, error: error.message})
     }
 }
