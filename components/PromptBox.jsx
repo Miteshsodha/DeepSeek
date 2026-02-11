@@ -6,9 +6,7 @@ import { useAppContext } from '@/context/AppContext';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 
-const PromptBox = ({ setIsLoading, isLoading }) => {
-
-  const [prompt, setPrompt] = useState('');
+const PromptBox = ({ setMessages, setIsLoading, isLoading }) => {  const [prompt, setPrompt] = useState('');
   const { user, chats, setChats, selectedChat, setSelectedChat } = useAppContext();
 
   const handleKeyDown = (e) => {
