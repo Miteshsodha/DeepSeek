@@ -31,7 +31,7 @@ export default function Home() {
   }, [selectedChat]);
 
   // Scroll to bottom function
-  const yourScrollFunction = () => {
+  const scrollToBottom = () => {
     if (containerRef.current) {
       containerRef.current.scrollTo({
         top: containerRef.current.scrollHeight,
@@ -42,8 +42,54 @@ export default function Home() {
 
   // Auto scroll to bottom when messages update
   useLayoutEffect(() => {
-    yourScrollFunction();
+    scrollToBottom();
   }, [messages, isLoading]);
+
+  // ✅ FIX: Centralized send handler (controls loading properly)
+  const handleSendMessage = async (prompt: string) => {
+    if (!prompt.trim()) return;
+
+    const userMessage: ChatMessage = {
+      role: "user",
+      content: prompt,
+    };
+
+    // Show user message instantly
+    setMessages((prev) => [...prev, userMessage]);
+    setIsLoading(true);
+
+    try {
+      const res = await fetch("/api/chat", { // your backend route
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: [...messages, userMessage],
+        }),
+      });
+
+      const data = await res.json();
+
+      const aiMessage: ChatMessage = {
+        role: "assistant",
+        content: data?.message || "No response",
+      };
+
+      setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      console.error("Chat Error:", error);
+
+      // Optional error message in UI
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Error: Failed to get response." },
+      ]);
+    } finally {
+      // ✅ This is the missing proper loading stop
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div>
@@ -67,7 +113,7 @@ export default function Home() {
             />
           </div>
 
-          {/* Chat Container (ALWAYS mounted) */}
+          {/* Chat Container */}
           <div
             ref={containerRef}
             className="relative flex flex-col items-center justify-start w-full mt-20 max-h-screen overflow-y-auto"
@@ -102,6 +148,7 @@ export default function Home() {
                   />
                 ))}
 
+                {/* ✅ Loader will now work correctly */}
                 {isLoading && (
                   <div className="flex gap-4 max-w-3xl w-full py-3">
                     <Image
@@ -109,10 +156,10 @@ export default function Home() {
                       src={assets.logo_icon}
                       alt="Logo"
                     />
-                    <div className="loader flex justify-center items-center gap-1">
+                    <div className="flex justify-center items-center gap-1">
                       <div className="w-1 h-1 rounded-full bg-white animate-bounce"></div>
-                      <div className="w-1 h-1 rounded-full bg-white animate-bounce"></div>
-                      <div className="w-1 h-1 rounded-full bg-white animate-bounce"></div>
+                      <div className="w-1 h-1 rounded-full bg-white animate-bounce delay-150"></div>
+                      <div className="w-1 h-1 rounded-full bg-white animate-bounce delay-300"></div>
                     </div>
                   </div>
                 )}
@@ -122,7 +169,12 @@ export default function Home() {
         </div>
       </div>
 
-      <PromptBox setMessages={setMessages} setIsLoading={setIsLoading} />
+      {/* ✅ IMPORTANT: Pass handleSendMessage */}
+      <PromptBox
+        setMessages={setMessages}
+        setIsLoading={setIsLoading}
+        handleSendMessage={handleSendMessage}
+      />
     </div>
   );
 }
