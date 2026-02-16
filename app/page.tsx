@@ -35,7 +35,7 @@ export default function Home() {
     if (containerRef.current) {
       containerRef.current.scrollTo({
         top: containerRef.current.scrollHeight,
-        behavior: 'smooth'
+        behavior: "smooth",
       });
     }
   };
@@ -51,7 +51,7 @@ export default function Home() {
         <Sidebar expand={expand} setExpand={setExpand} />
 
         <div className="flex-1 flex flex-col items-center justify-center px-4 pb-8 bg-[#292a2d] text-white relative">
-
+          
           {/* Mobile Header */}
           <div className="md:hidden absolute px-4 top-6 flex items-center justify-between w-full">
             <Image
@@ -122,8 +122,12 @@ export default function Home() {
         </div>
       </div>
 
-      <PromptBox setMessages={setMessages} setIsLoading={setIsLoading} />
+      {/* FIXED: Added isLoading prop to remove TypeScript error */}
+      <PromptBox
+        setMessages={setMessages}
+        setIsLoading={setIsLoading}
+        isLoading={isLoading}
+      />
     </div>
   );
 }
-
