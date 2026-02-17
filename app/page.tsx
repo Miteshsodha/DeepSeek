@@ -127,7 +127,6 @@ export default function Home() {
         setMessages={setMessages}
         setIsLoading={setIsLoading}
         isLoading={isLoading}
-        handleSendMessage={handleSendMessage}
       />
     </div>
   );
