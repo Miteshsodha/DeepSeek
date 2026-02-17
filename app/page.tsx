@@ -161,6 +161,51 @@ export default function Home() {
           )}
         </div>
 
+        // ⭐ REQUIRED: Add this handler function
+const handleSendMessage = async (prompt: string) => {
+  if (!prompt.trim()) return;
+
+  const userMessage: ChatMessage = {
+    role: "user",
+    content: prompt,
+  };
+
+  // Show user message instantly
+  setMessages((prev) => [...prev, userMessage]);
+  setIsLoading(true);
+
+  try {
+    // If you already have /api/chat (GreatStack style)
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages: [...messages, userMessage],
+      }),
+    });
+
+    const data = await res.json();
+
+    const aiMessage: ChatMessage = {
+      role: "assistant",
+      content: data?.message || "No response",
+    };
+
+    setMessages((prev) => [...prev, aiMessage]);
+  } catch (error) {
+    console.error("Chat Error:", error);
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", content: "Error: API failed." },
+    ]);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
         {/* ✅ MOVED INSIDE LAYOUT (Fixes bottom floating PromptBox) */}
         <div className="border-t border-white/10 bg-[#292a2d]">
           <PromptBox
