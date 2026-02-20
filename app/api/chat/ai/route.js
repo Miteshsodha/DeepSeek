@@ -17,7 +17,7 @@ const openai = new OpenAI({
 export async function POST(req) {
   try {
     // FIX: Correct Clerk auth for App Router
-    const { userId } = getAuth();
+    const { userId } = getAuth(req);
 
     if (!userId) {
       return NextResponse.json(
