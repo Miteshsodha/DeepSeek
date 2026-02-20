@@ -2,7 +2,7 @@ export const maxDuration = 60;
 export const runtime = "nodejs";
 
 import OpenAI from "openai";
-import { getAuth } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server"; // ✅ FIXED
 import { NextResponse } from "next/server";
 import Chat from "@/models/Chat";
 import connectDB from "@/config/db";
@@ -16,8 +16,8 @@ const openai = new OpenAI({
 
 export async function POST(req) {
   try {
-    // ✅ FIX 1: Pass req to getAuth (VERY IMPORTANT)
-    const { userId } = getAuth(req);
+    // ✅ FIX 1: Correct Clerk auth for App Router
+    const { userId } = auth();
 
     if (!userId) {
       return NextResponse.json(
@@ -31,7 +31,7 @@ export async function POST(req) {
 
     console.log("Request:", { userId, chatId, prompt });
 
-    // ✅ FIX 2: Validate chatId (prevents 500 crash)
+    // Validate inputs
     if (!chatId || !mongoose.Types.ObjectId.isValid(chatId)) {
       return NextResponse.json(
         { success: false, message: "Invalid or missing chatId" },
@@ -48,7 +48,7 @@ export async function POST(req) {
 
     await connectDB();
 
-    // ✅ FIX 3: Do NOT manually convert to ObjectId (safer)
+    // Find chat for this user
     const data = await Chat.findOne({
       _id: chatId,
       userId: userId,
@@ -61,7 +61,7 @@ export async function POST(req) {
       );
     }
 
-    // Add user message
+    // Add user message to DB
     const userMessage = {
       role: "user",
       content: prompt,
@@ -77,11 +77,11 @@ export async function POST(req) {
 
     console.log("Calling DeepSeek API...");
 
-    // ✅ FIX 4: Safe DeepSeek call with error isolation
+    // DeepSeek API call
     let completion;
     try {
       completion = await openai.chat.completions.create({
-        model: "deepseek-chat",
+        model: "deepseek-chat", // or deepseek-reasoner if using R1
         messages: formattedMessages,
         temperature: 0.7,
       });
@@ -97,9 +97,9 @@ export async function POST(req) {
       );
     }
 
-    const aiMessage = completion?.choices?.[0]?.message;
+    const aiContent = completion?.choices?.[0]?.message?.content;
 
-    if (!aiMessage || !aiMessage.content) {
+    if (!aiContent) {
       return NextResponse.json(
         { success: false, message: "No response from DeepSeek API" },
         { status: 500 }
@@ -108,7 +108,7 @@ export async function POST(req) {
 
     const assistantMessage = {
       role: "assistant",
-      content: aiMessage.content,
+      content: aiContent,
       timestamp: Date.now(),
     };
 
@@ -117,8 +117,16 @@ export async function POST(req) {
 
     console.log("Chat saved successfully");
 
+    // ✅ IMPORTANT: Matches your frontend format
     return NextResponse.json(
-      { success: true, data: assistantMessage },
+      {
+        success: true,
+        data: {
+          content: assistantMessage.content,
+          role: "assistant",
+          timestamp: assistantMessage.timestamp,
+        },
+      },
       { status: 200 }
     );
   } catch (error) {
