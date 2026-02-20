@@ -2,7 +2,7 @@ export const maxDuration = 60;
 export const runtime = "nodejs";
 
 import OpenAI from "openai";
-import { auth } from "@clerk/nextjs/server";
+import {getAuth} from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import Chat from "@/models/Chat";
 import connectDB from "@/config/db";
@@ -17,7 +17,7 @@ const openai = new OpenAI({
 export async function POST(req) {
   try {
     // FIX: Correct Clerk auth for App Router
-    const { userId } = auth();
+    const { userId } = getAuth();
 
     if (!userId) {
       return NextResponse.json(
