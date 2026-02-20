@@ -34,12 +34,7 @@ export async function POST(req) {
 
     const { chatId, prompt } = body;
 
-if (!chatId || !prompt) {
-  return NextResponse.json(
-    { success: false, message: "chatId or prompt missing" },
-    { status: 400 }
-  );
-}
+
 
     console.log("Request:", { userId, chatId, prompt });
 
