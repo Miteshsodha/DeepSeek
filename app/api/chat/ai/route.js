@@ -8,7 +8,6 @@ import Chat from "@/models/Chat";
 import connectDB from "@/config/db";
 import mongoose from "mongoose";
 
-console.log("ENV KEY:", process.env.DEEPSEEK_API_KEY);
 // DeepSeek client
 const openai = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY,
