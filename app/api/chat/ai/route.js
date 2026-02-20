@@ -2,21 +2,21 @@ export const maxDuration = 60;
 export const runtime = "nodejs";
 
 import OpenAI from "openai";
-import {getAuth} from "@clerk/nextjs/server";
+import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import Chat from "@/models/Chat";
 import connectDB from "@/config/db";
 import mongoose from "mongoose";
 
-// Initialize DeepSeek client (OpenAI-compatible)
+// DeepSeek client
 const openai = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: "https://api.deepseek.com/v1", // FIX: must include /v1
+  baseURL: "https://api.deepseek.com/v1",
 });
 
 export async function POST(req) {
   try {
-    // FIX: Correct Clerk auth for App Router
+    // ✅ FIX 1: Pass req to getAuth (VERY IMPORTANT)
     const { userId } = getAuth(req);
 
     if (!userId) {
@@ -26,9 +26,18 @@ export async function POST(req) {
       );
     }
 
-    const { chatId, prompt } = await req.json();
+    const body = await req.json();
+    const { chatId, prompt } = body;
 
     console.log("Request:", { userId, chatId, prompt });
+
+    // ✅ FIX 2: Validate chatId (prevents 500 crash)
+    if (!chatId || !mongoose.Types.ObjectId.isValid(chatId)) {
+      return NextResponse.json(
+        { success: false, message: "Invalid or missing chatId" },
+        { status: 400 }
+      );
+    }
 
     if (!prompt || !prompt.trim()) {
       return NextResponse.json(
@@ -37,18 +46,17 @@ export async function POST(req) {
       );
     }
 
-    // Connect DB
     await connectDB();
 
-    // FIX: Convert chatId to ObjectId (very important)
+    // ✅ FIX 3: Do NOT manually convert to ObjectId (safer)
     const data = await Chat.findOne({
-      userId,
-      _id: new mongoose.Types.ObjectId(chatId),
+      _id: chatId,
+      userId: userId,
     });
 
     if (!data) {
       return NextResponse.json(
-        { success: false, message: "Chat not found" },
+        { success: false, message: "Chat not found for this user" },
         { status: 404 }
       );
     }
@@ -62,7 +70,6 @@ export async function POST(req) {
 
     data.messages.push(userMessage);
 
-    // FIX: Send full chat history to DeepSeek (better responses)
     const formattedMessages = data.messages.map((msg) => ({
       role: msg.role,
       content: msg.content,
@@ -70,16 +77,33 @@ export async function POST(req) {
 
     console.log("Calling DeepSeek API...");
 
-    const completion = await openai.chat.completions.create({
-      model: "deepseek-chat",
-      messages: formattedMessages,
-      temperature: 0.7,
-    });
+    // ✅ FIX 4: Safe DeepSeek call with error isolation
+    let completion;
+    try {
+      completion = await openai.chat.completions.create({
+        model: "deepseek-chat",
+        messages: formattedMessages,
+        temperature: 0.7,
+      });
+    } catch (deepseekError) {
+      console.error("DeepSeek Error:", deepseekError);
+      return NextResponse.json(
+        {
+          success: false,
+          message: "DeepSeek API failed",
+          error: deepseekError.message,
+        },
+        { status: 500 }
+      );
+    }
 
-    const aiMessage = completion.choices?.[0]?.message;
+    const aiMessage = completion?.choices?.[0]?.message;
 
-    if (!aiMessage) {
-      throw new Error("No response from DeepSeek API");
+    if (!aiMessage || !aiMessage.content) {
+      return NextResponse.json(
+        { success: false, message: "No response from DeepSeek API" },
+        { status: 500 }
+      );
     }
 
     const assistantMessage = {
@@ -88,7 +112,6 @@ export async function POST(req) {
       timestamp: Date.now(),
     };
 
-    // Save AI response
     data.messages.push(assistantMessage);
     await data.save();
 
@@ -99,11 +122,12 @@ export async function POST(req) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("API Error:", error);
+    console.error("FULL API CRASH:", error);
 
     return NextResponse.json(
       {
         success: false,
+        message: "Internal Server Error",
         error: error.message,
         type: error.name,
       },
