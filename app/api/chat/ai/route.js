@@ -98,7 +98,7 @@ export async function POST(req) {
     let completion;
     try {
       completion = await openai.chat.completions.create({
-        model: "deepseek-chat",
+        model: "deepseek/deepseek-chat",
         messages: limitedMessages,
         temperature: 0.7,
         max_tokens: 500,
