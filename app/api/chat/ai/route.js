@@ -1,6 +1,9 @@
 export const maxDuration = 60;
 export const runtime = "nodejs";
 
+const body = await req.json();
+console.log("BODY:", body);
+
 import OpenAI from "openai";
 import { getAuth } from "@clerk/nextjs/server"; // ✅ FIXED
 import { NextResponse } from "next/server";
