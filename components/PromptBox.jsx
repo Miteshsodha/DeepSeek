@@ -8,23 +8,29 @@ import axios from 'axios';
 
 const PromptBox = ({ setMessages, setIsLoading, isLoading }) => {
   const [prompt, setPrompt] = useState('');
-  const { user, chats, setChats, selectedChat, setSelectedChat } = useAppContext();
+  const context = useAppContext(); // 🔥 safer destructuring
+
+  const user = context?.user;
+  const chats = context?.chats;
+  const setChats = context?.setChats;
+  const selectedChat = context?.selectedChat;
+  const setSelectedChat = context?.setSelectedChat;
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendPrompt();
     }
-  }
+  };
 
   const sendPrompt = async () => {
     const promptCopy = prompt;
 
     try {
       if (!user) return toast.error('Login to send message');
-      if (isLoading) return toast.error("Wait for the previous prompt response");
-      if (!promptCopy.trim()) return toast.error("Please enter a message");
-      if (!selectedChat?._id) return toast.error("No chat selected");
+      if (!selectedChat?._id) return toast.error('Select a chat first');
+      if (isLoading) return toast.error("Wait for previous response");
+      if (!promptCopy.trim()) return toast.error("Enter a message");
 
       setIsLoading(true);
       setPrompt("");
@@ -33,96 +39,98 @@ const PromptBox = ({ setMessages, setIsLoading, isLoading }) => {
         role: "user",
         content: promptCopy,
         timestamp: Date.now(),
+      };
+
+      // Safe chat update
+      if (setChats && selectedChat) {
+        setChats((prevChats) =>
+          prevChats.map((chat) =>
+            chat._id === selectedChat._id
+              ? { ...chat, messages: [...(chat.messages || []), userPrompt] }
+              : chat
+          )
+        );
       }
 
-      // Update chats list
-      setChats((prevChats) =>
-        prevChats.map((chat) =>
-          chat._id === selectedChat._id
-            ? { ...chat, messages: [...chat.messages, userPrompt] }
-            : chat
-        )
-      );
+      if (setSelectedChat) {
+        setSelectedChat((prev) => ({
+          ...prev,
+          messages: [...(prev?.messages || []), userPrompt]
+        }));
+      }
 
-      // Update selected chat messages
-      setSelectedChat((prev) => ({
-        ...prev,
-        messages: [...prev.messages, userPrompt]
-      }));
+      console.log("Sending to API:", promptCopy);
 
-      const { data } = await axios.post('/api/chat/ai', {
+      const res = await axios.post('/api/chat/ai', {
         chatId: selectedChat._id,
         prompt: promptCopy
       });
 
-      if (data.success) {
-        const message = data.data.content;
-        const messageTokens = message.split(" ");
+      const data = res.data;
+
+      if (data?.success) {
+        const message = data.data.content || "";
+        const tokens = message.split(" ");
 
         let assistantMessage = {
-          role: 'assistant',
-          content: '',
+          role: "assistant",
+          content: "",
           timestamp: Date.now(),
         };
 
-        // Add empty assistant message first
         setSelectedChat((prev) => ({
           ...prev,
-          messages: [...prev.messages, assistantMessage],
+          messages: [...(prev.messages || []), assistantMessage],
         }));
 
-        // Typing animation
-        messageTokens.forEach((_, i) => {
+        tokens.forEach((_, i) => {
           setTimeout(() => {
             assistantMessage = {
               ...assistantMessage,
-              content: messageTokens.slice(0, i + 1).join(" ")
+              content: tokens.slice(0, i + 1).join(" ")
             };
 
             setSelectedChat((prev) => {
-              const updatedMessages = [
+              const updated = [
                 ...prev.messages.slice(0, -1),
                 assistantMessage
               ];
-              return { ...prev, messages: updatedMessages };
+              return { ...prev, messages: updated };
             });
-          }, i * 40);
+          }, i * 30);
         });
 
       } else {
-        toast.error(data.message);
+        toast.error(data?.message || "API failed");
         setPrompt(promptCopy);
       }
 
     } catch (error) {
-      console.error("Error sending message:", error);
-      toast.error(error.message || "Something went wrong");
+      console.error("API ERROR:", error);
+      toast.error(error?.response?.data?.message || error.message);
       setPrompt(promptCopy);
     } finally {
       setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className={`w-full ${selectedChat?.messages?.length > 0 ? 'max-w-3xl' : 'max-w-2xl'} bg-[#404045] p-4 rounded-3xl shadow-xl`}>
+      
       <textarea
         onKeyDown={handleKeyDown}
         rows={2}
         placeholder='Message DeepSeek'
-        className='outline-none w-full resize-none overflow-hidden break-words bg-transparent text-white'
+        className='outline-none w-full resize-none bg-transparent text-white'
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
       />
 
       <div className='flex items-center justify-between text-sm'>
         <div className='flex items-center gap-2'>
-          <p className='flex items-center gap-2 text-xs border border-gray-300/40 px-2 py-1 rounded-full cursor-pointer hover:bg-gray-500/20 transition'>
+          <p className='flex items-center gap-2 text-xs border border-gray-300/40 px-2 py-1 rounded-full'>
             <Image src={assets.deepthink_icon} alt='' className='h-5' />
             DeepThink (R1)
-          </p>
-          <p className='flex items-center gap-2 text-xs border border-gray-300/40 px-2 py-1 rounded-full cursor-pointer hover:bg-gray-500/20 transition'>
-            <Image src={assets.search_icon} alt='' className='h-5' />
-            Search
           </p>
         </div>
 
@@ -135,6 +143,6 @@ const PromptBox = ({ setMessages, setIsLoading, isLoading }) => {
       </div>
     </div>
   );
-}
+};
 
 export default PromptBox;
