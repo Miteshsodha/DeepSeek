@@ -11,7 +11,7 @@ import mongoose from "mongoose";
 // DeepSeek client (with timeout to prevent slow fails)
 const openai = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: "https://api.deepseek.com/v1",
+  baseURL: "https://openrouter.ai/api/v1",
   timeout: 60000,
 });
 
