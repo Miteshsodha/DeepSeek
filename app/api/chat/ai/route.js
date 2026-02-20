@@ -2,21 +2,22 @@ export const maxDuration = 60;
 export const runtime = "nodejs";
 
 import OpenAI from "openai";
-import { getAuth } from "@clerk/nextjs/server"; // ✅ FIXED
+import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import Chat from "@/models/Chat";
 import connectDB from "@/config/db";
 import mongoose from "mongoose";
 
-// DeepSeek client
+// DeepSeek client (with timeout to prevent slow fails)
 const openai = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY,
   baseURL: "https://api.deepseek.com/v1",
+  timeout: 60000,
 });
 
 export async function POST(req) {
   try {
-    // ✅ FIX 1: Correct Clerk auth for App Router
+    // Auth
     const { userId } = getAuth(req);
 
     if (!userId) {
@@ -61,7 +62,7 @@ export async function POST(req) {
       );
     }
 
-    // Add user message to DB
+    // Save user message (NEW CORRECT FORMAT)
     const userMessage = {
       role: "user",
       content: prompt,
@@ -70,23 +71,44 @@ export async function POST(req) {
 
     data.messages.push(userMessage);
 
-    const formattedMessages = data.messages.map((msg) => ({
-      role: msg.role,
-      content: msg.content,
-    }));
+    // 🔥 CRITICAL FIX: Support OLD + NEW message schema
+    // Old schema: { name, content }
+    // New schema: { role, content }
+    const safeMessages = (data.messages || []).map((msg) => {
+      // Convert old messages that used "name" instead of "role"
+      let role = msg.role;
 
-    console.log("Calling DeepSeek API...");
+      if (!role) {
+        if (msg.name === "assistant") role = "assistant";
+        else role = "user";
+      }
+
+      return {
+        role: role === "assistant" ? "assistant" : "user",
+        content: msg.content || "",
+      };
+    });
+
+    // 🚀 PERFORMANCE FIX: Limit history (prevents slow + API fail)
+    const limitedMessages = safeMessages.slice(-10);
+
+    console.log("Messages sent to DeepSeek:", limitedMessages);
 
     // DeepSeek API call
     let completion;
     try {
       completion = await openai.chat.completions.create({
-        model: "deepseek-chat", // or deepseek-reasoner if using R1
-        messages: formattedMessages,
+        model: "deepseek-chat",
+        messages: limitedMessages,
         temperature: 0.7,
+        max_tokens: 500,
       });
     } catch (deepseekError) {
-      console.error("DeepSeek Error:", deepseekError);
+      console.error(
+        "DeepSeek Error Full:",
+        deepseekError?.response?.data || deepseekError
+      );
+
       return NextResponse.json(
         {
           success: false,
@@ -97,15 +119,12 @@ export async function POST(req) {
       );
     }
 
-    const aiContent = completion?.choices?.[0]?.message?.content;
+    // Safe AI response parsing (prevents crash)
+    const aiContent =
+      completion?.choices?.[0]?.message?.content ||
+      "Sorry, I couldn't generate a response.";
 
-    if (!aiContent) {
-      return NextResponse.json(
-        { success: false, message: "No response from DeepSeek API" },
-        { status: 500 }
-      );
-    }
-
+    // Save assistant message (NEW FORMAT)
     const assistantMessage = {
       role: "assistant",
       content: aiContent,
@@ -117,7 +136,7 @@ export async function POST(req) {
 
     console.log("Chat saved successfully");
 
-    // ✅ IMPORTANT: Matches your frontend format
+    // Response format (kept same for your frontend)
     return NextResponse.json(
       {
         success: true,
