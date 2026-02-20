@@ -8,13 +8,13 @@ import axios from 'axios';
 
 const PromptBox = ({ setMessages, setIsLoading, isLoading }) => {
   const [prompt, setPrompt] = useState('');
-  const context = useAppContext();
+  const context = useAppContext() || {};
 
-  const user = context?.user;
-  const chats = context?.chats;
-  const setChats = context?.setChats;
-  const selectedChat = context?.selectedChat;
-  const setSelectedChat = context?.setSelectedChat;
+  const user = context.user;
+  const chats = context.chats;
+  const setChats = context.setChats;
+  const selectedChat = context.selectedChat;
+  const setSelectedChat = context.setSelectedChat;
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -27,13 +27,12 @@ const PromptBox = ({ setMessages, setIsLoading, isLoading }) => {
     const promptCopy = prompt;
 
     try {
-      // Validation checks
       if (!user) return toast.error('Login to send message');
       if (!selectedChat?._id) return toast.error('Select a chat first');
       if (isLoading) return toast.error("Wait for previous response");
       if (!promptCopy.trim()) return toast.error("Enter a message");
 
-      setIsLoading(true);
+      setIsLoading?.(true);
       setPrompt("");
 
       const userPrompt = {
@@ -42,19 +41,20 @@ const PromptBox = ({ setMessages, setIsLoading, isLoading }) => {
         timestamp: Date.now(),
       };
 
-      // Update selected chat safely
-      setSelectedChat((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          messages: [...(prev.messages || []), userPrompt],
-        };
-      });
+      // 🔒 SAFE: Only call if function exists
+      if (typeof setSelectedChat === "function") {
+        setSelectedChat((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            messages: [...(prev.messages || []), userPrompt],
+          };
+        });
+      }
 
-      // Update chats list safely
-      if (setChats && selectedChat) {
+      if (typeof setChats === "function" && selectedChat) {
         setChats((prevChats) =>
-          prevChats.map((chat) =>
+          (prevChats || []).map((chat) =>
             chat._id === selectedChat._id
               ? {
                   ...chat,
@@ -82,58 +82,59 @@ const PromptBox = ({ setMessages, setIsLoading, isLoading }) => {
 
       const fullMessage = data?.data?.content || "";
 
-      // Add empty assistant message first (for typing effect)
-      const assistantTimestamp = Date.now();
+      // Add assistant placeholder safely
+      if (typeof setSelectedChat === "function") {
+        setSelectedChat((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            messages: [
+              ...(prev.messages || []),
+              {
+                role: "assistant",
+                content: "",
+                timestamp: Date.now(),
+              },
+            ],
+          };
+        });
+      }
 
-      setSelectedChat((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          messages: [
-            ...(prev.messages || []),
-            {
-              role: "assistant",
-              content: "",
-              timestamp: assistantTimestamp,
-            },
-          ],
-        };
-      });
-
-      // Typing animation (SAFE - no mutation, no race condition)
+      // Typing animation (safe)
       let currentText = "";
       const words = fullMessage.split(" ");
 
       for (let i = 0; i < words.length; i++) {
         currentText += words[i] + " ";
-
         await new Promise((resolve) => setTimeout(resolve, 25));
 
-        setSelectedChat((prev) => {
-          if (!prev) return prev;
+        if (typeof setSelectedChat === "function") {
+          setSelectedChat((prev) => {
+            if (!prev) return prev;
 
-          const msgs = [...(prev.messages || [])];
-          const lastIndex = msgs.length - 1;
+            const msgs = [...(prev.messages || [])];
+            const lastIndex = msgs.length - 1;
 
-          if (lastIndex >= 0 && msgs[lastIndex].role === "assistant") {
-            msgs[lastIndex] = {
-              ...msgs[lastIndex],
-              content: currentText.trim(),
+            if (lastIndex >= 0 && msgs[lastIndex]?.role === "assistant") {
+              msgs[lastIndex] = {
+                ...msgs[lastIndex],
+                content: currentText.trim(),
+              };
+            }
+
+            return {
+              ...prev,
+              messages: msgs,
             };
-          }
-
-          return {
-            ...prev,
-            messages: msgs,
-          };
-        });
+          });
+        }
       }
     } catch (error) {
       console.error("API ERROR:", error);
       toast.error(error?.response?.data?.message || error.message);
       setPrompt(promptCopy);
     } finally {
-      setIsLoading(false);
+      setIsLoading?.(false);
     }
   };
 
