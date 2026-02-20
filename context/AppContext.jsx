@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser, auth } from "@clerk/nextjs";
+import { useUser, useAuth } from "@clerk/nextjs";
 import axios from "axios";
 import { createContext, useContext, useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -13,7 +13,7 @@ export const useAppContext = () => {
 
 export const AppContextProvider = ({ children }) => {
     const { user } = useUser();
-    const { getToken } = auth();
+    const { getToken } = useAuth();
 
     const [chats, setChats] = useState([]);
     const [selectedChat, setSelectedChat] = useState(null);
