@@ -6,7 +6,7 @@ import { useAppContext } from '@/context/AppContext';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 
-const PromptBox = ({ setMessages, setIsLoading, isLoading }) => {
+const PromptBox = ({ setMessages, setIsLoading, isLoading, isEmptyState = false }) => {
   const [prompt, setPrompt] = useState('');
   const context = useAppContext() || {};
 
@@ -15,6 +15,7 @@ const PromptBox = ({ setMessages, setIsLoading, isLoading }) => {
   const setChats = context.setChats;
   const selectedChat = context.selectedChat;
   const setSelectedChat = context.setSelectedChat;
+  const autoRenameChat = context.autoRenameChat; // ✅ NEW: Get auto-rename function
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -34,6 +35,9 @@ const PromptBox = ({ setMessages, setIsLoading, isLoading }) => {
 
       setIsLoading?.(true);
       setPrompt("");
+
+      // ✅ NEW: Check if this is the first message (empty conversation)
+      const isFirstMessage = !selectedChat?.messages || selectedChat.messages.length === 0;
 
       const userPrompt = {
         role: "user",
@@ -78,6 +82,11 @@ const PromptBox = ({ setMessages, setIsLoading, isLoading }) => {
         toast.error(data?.message || "API failed");
         setPrompt(promptCopy);
         return;
+      }
+
+      // ✅ NEW: Auto-rename chat on first message
+      if (isFirstMessage && typeof autoRenameChat === "function") {
+        await autoRenameChat(selectedChat._id, promptCopy);
       }
 
       const fullMessage = data?.data?.content || "";
@@ -141,14 +150,14 @@ const PromptBox = ({ setMessages, setIsLoading, isLoading }) => {
   return (
     <div
       className={`w-full ${
-        selectedChat?.messages?.length > 0 ? 'max-w-3xl' : 'max-w-2xl'
+        !isEmptyState && selectedChat?.messages?.length > 0 ? 'max-w-3xl' : isEmptyState ? 'max-w-2xl' : 'max-w-2xl'
       } bg-[#404045] p-4 rounded-3xl shadow-xl`}
     >
       <textarea
         onKeyDown={handleKeyDown}
-        rows={2}
+        rows={isEmptyState ? 3 : 2}
         placeholder="Message DeepSeek"
-        className="outline-none w-full resize-none bg-transparent text-white"
+        className="outline-none w-full resize-none bg-transparent text-white placeholder-gray-400"
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
       />
