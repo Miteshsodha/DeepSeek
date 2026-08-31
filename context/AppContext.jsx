@@ -83,6 +83,39 @@ export const AppContextProvider = ({ children }) => {
         }
     };
 
+    // ✅ NEW: Auto-rename chat based on first user message
+    const autoRenameChat = async (chatId, firstMessage) => {
+        try {
+            // Generate chat name from first message
+            let chatName = firstMessage.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+            
+            if (chatName.length > 40) {
+                chatName = chatName.split(' ').slice(0, 5).join(' ') + '...';
+            }
+            
+            if (!chatName) chatName = 'New Chat';
+
+            const token = await getToken();
+
+            const { data } = await axios.post('/api/chat/rename', {
+                chatId: chatId,
+                name: chatName
+            }, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (data?.success) {
+                // Refresh chats to reflect new name
+                await fetchUsersChats();
+            }
+        } catch (error) {
+            console.error("Auto-rename error:", error);
+            // Silently fail - don't show error to user for auto-rename
+        }
+    };
+
     useEffect(() => {
         if (user) {
             fetchUsersChats();
@@ -97,6 +130,7 @@ export const AppContextProvider = ({ children }) => {
         setSelectedChat, // ✅ Proper naming (important)
         fetchUsersChats,
         createNewChat,
+        autoRenameChat, // ✅ NEW: Export auto-rename function
     };
 
     return (
