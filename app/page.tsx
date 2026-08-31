@@ -17,14 +17,17 @@ export default function Home() {
   const [expand, setExpand] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showRenameInput, setShowRenameInput] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
 
-  const { selectedChat } = useAppContext();
+  const { selectedChat, manualRenameChat } = useAppContext();
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Update messages when chat changes
   useEffect(() => {
     if (selectedChat?.messages) {
       setMessages(selectedChat.messages);
+      setRenameValue(selectedChat?.name || '');
     } else {
       setMessages([]);
     }
@@ -43,6 +46,25 @@ export default function Home() {
   useLayoutEffect(() => {
     scrollToBottom();
   }, [messages, isLoading]);
+
+  // ✅ NEW: Handle manual rename
+  const handleRename = async () => {
+    if (!renameValue.trim()) return;
+    
+    const success = await manualRenameChat(selectedChat._id, renameValue);
+    if (success) {
+      setShowRenameInput(false);
+    }
+  };
+
+  const handleRenameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleRename();
+    } else if (e.key === 'Escape') {
+      setShowRenameInput(false);
+      setRenameValue(selectedChat?.name || '');
+    }
+  };
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -100,9 +122,37 @@ export default function Home() {
             </div>
           ) : (
             <>
-              <p className="sticky top-4 z-10 border border-transparent hover:border-gray-500/50 py-1 px-2 rounded-lg font-semibold bg-[#292a2d]">
-                {selectedChat?.name}
-              </p>
+              {/* ✅ IMPROVED: Chat name with rename functionality */}
+              <div className="sticky top-4 z-10 flex items-center gap-2 border border-transparent hover:border-gray-500/50 py-1 px-2 rounded-lg font-semibold bg-[#292a2d] group">
+                {showRenameInput ? (
+                  <input
+                    type="text"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onKeyDown={handleRenameKeyDown}
+                    onBlur={handleRename}
+                    autoFocus
+                    className="bg-[#404045] text-white px-2 py-1 rounded outline-none"
+                    placeholder="Enter new name"
+                  />
+                ) : (
+                  <>
+                    <p>{selectedChat?.name}</p>
+                    {/* ✅ NEW: Edit icon button */}
+                    <button
+                      onClick={() => setShowRenameInput(true)}
+                      className="opacity-0 group-hover:opacity-100 transition ml-2"
+                      title="Rename chat"
+                    >
+                      <Image 
+                        src={assets.pencil_icon} 
+                        alt="Rename" 
+                        className="w-4 h-4 cursor-pointer hover:opacity-70" 
+                      />
+                    </button>
+                  </>
+                )}
+              </div>
 
               {messages.map((msg, index) => (
                 <Message
