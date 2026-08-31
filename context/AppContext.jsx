@@ -83,7 +83,7 @@ export const AppContextProvider = ({ children }) => {
         }
     };
 
-    // ✅ NEW: Auto-rename chat based on first user message
+    // ✅ AUTO-RENAME: Generate name from first user message
     const autoRenameChat = async (chatId, firstMessage) => {
         try {
             // Generate chat name from first message
@@ -116,6 +116,86 @@ export const AppContextProvider = ({ children }) => {
         }
     };
 
+    // ✅ NEW: Rename chat based on conversation content (AI response)
+    const autoRenameFromConversation = async (chatId, messages) => {
+        try {
+            if (!messages || messages.length < 2) return;
+
+            // Get the assistant's first response
+            const assistantMessage = messages.find(msg => msg.role === 'assistant')?.content;
+            const userMessage = messages.find(msg => msg.role === 'user')?.content;
+
+            if (!assistantMessage) return;
+
+            // Generate name from first sentence of assistant response or user message
+            let chatName = assistantMessage.split('.')[0].trim();
+            
+            if (!chatName) {
+                chatName = userMessage?.replace(/[^a-zA-Z0-9\s]/g, '').trim() || 'New Chat';
+            }
+
+            // Clean up and limit length
+            chatName = chatName.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+            
+            if (chatName.length > 40) {
+                chatName = chatName.split(' ').slice(0, 5).join(' ') + '...';
+            }
+            
+            if (!chatName) chatName = 'New Chat';
+
+            const token = await getToken();
+
+            const { data } = await axios.post('/api/chat/rename', {
+                chatId: chatId,
+                name: chatName
+            }, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (data?.success) {
+                await fetchUsersChats();
+            }
+        } catch (error) {
+            console.error("Auto-rename from conversation error:", error);
+        }
+    };
+
+    // ✅ NEW: Manual rename function
+    const manualRenameChat = async (chatId, newName) => {
+        try {
+            if (!newName || !newName.trim()) {
+                toast.error('Chat name cannot be empty');
+                return false;
+            }
+
+            const token = await getToken();
+
+            const { data } = await axios.post('/api/chat/rename', {
+                chatId: chatId,
+                name: newName.trim()
+            }, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (data?.success) {
+                await fetchUsersChats();
+                toast.success('Chat renamed successfully');
+                return true;
+            } else {
+                toast.error(data?.message || 'Failed to rename chat');
+                return false;
+            }
+        } catch (error) {
+            console.error("Manual rename error:", error);
+            toast.error(error?.response?.data?.message || error.message);
+            return false;
+        }
+    };
+
     useEffect(() => {
         if (user) {
             fetchUsersChats();
@@ -127,10 +207,12 @@ export const AppContextProvider = ({ children }) => {
         chats,
         setChats,
         selectedChat,
-        setSelectedChat, // ✅ Proper naming (important)
+        setSelectedChat,
         fetchUsersChats,
         createNewChat,
-        autoRenameChat, // ✅ NEW: Export auto-rename function
+        autoRenameChat,
+        autoRenameFromConversation, // ✅ NEW: Auto-rename from conversation
+        manualRenameChat, // ✅ NEW: Manual rename function
     };
 
     return (
