@@ -72,8 +72,9 @@ export default function Home() {
           className="flex-1 flex flex-col items-center justify-start w-full mt-20 px-4 overflow-y-auto pb-40"
         >
           {messages.length === 0 ? (
-            <>
-              <div className="flex items-center gap-3 mt-24">
+            // ✅ IMPROVED: Empty State with centered search box
+            <div className="flex-1 flex flex-col items-center justify-center w-full">
+              <div className="flex items-center gap-3 mb-8">
                 <Image
                   src={assets.logo_icon}
                   alt="Logo"
@@ -83,10 +84,20 @@ export default function Home() {
                   Hi, I am DeepSeek.
                 </p>
               </div>
-              <p className="text-sm mt-2">
+              <p className="text-sm mb-16 text-gray-400">
                 How can I help you today?
               </p>
-            </>
+              
+              {/* ✅ NEW: Centered Search Box in Empty State */}
+              <div className="w-full flex justify-center px-4">
+                <PromptBox
+                  setMessages={setMessages}
+                  setIsLoading={setIsLoading}
+                  isLoading={isLoading}
+                  isEmptyState={true}
+                />
+              </div>
+            </div>
           ) : (
             <>
               <p className="sticky top-4 z-10 border border-transparent hover:border-gray-500/50 py-1 px-2 rounded-lg font-semibold bg-[#292a2d]">
@@ -119,16 +130,19 @@ export default function Home() {
           )}
         </div>
 
-        {/* ✅ FIXED: PromptBox INSIDE layout & fixed bottom like DeepSeek */}
-        <div className="absolute bottom-0 left-0 w-full flex justify-center px-4 pb-6 bg-gradient-to-t from-[#292a2d] to-transparent">
-          <PromptBox
-            setMessages={setMessages}
-            setIsLoading={setIsLoading}
-            isLoading={isLoading}
-          />
-        </div>
+        {/* ✅ FIXED: PromptBox INSIDE layout & fixed bottom (shown when messages exist) */}
+        {messages.length > 0 && (
+          <div className="absolute bottom-0 left-0 w-full flex justify-center px-4 pb-6 bg-gradient-to-t from-[#292a2d] to-transparent">
+            <PromptBox
+              setMessages={setMessages}
+              setIsLoading={setIsLoading}
+              isLoading={isLoading}
+              isEmptyState={false}
+            />
+          </div>
+        )}
 
       </div>
     </div>
   );
-                }
+}
