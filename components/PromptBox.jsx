@@ -15,7 +15,7 @@ const PromptBox = ({ setMessages, setIsLoading, isLoading, isEmptyState = false 
   const setChats = context.setChats;
   const selectedChat = context.selectedChat;
   const setSelectedChat = context.setSelectedChat;
-  const autoRenameChat = context.autoRenameChat; // ✅ NEW: Get auto-rename function
+  const autoRenameFromConversation = context.autoRenameFromConversation; // ✅ NEW: Get auto-rename function
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -35,9 +35,6 @@ const PromptBox = ({ setMessages, setIsLoading, isLoading, isEmptyState = false 
 
       setIsLoading?.(true);
       setPrompt("");
-
-      // ✅ NEW: Check if this is the first message (empty conversation)
-      const isFirstMessage = !selectedChat?.messages || selectedChat.messages.length === 0;
 
       const userPrompt = {
         role: "user",
@@ -82,11 +79,6 @@ const PromptBox = ({ setMessages, setIsLoading, isLoading, isEmptyState = false 
         toast.error(data?.message || "API failed");
         setPrompt(promptCopy);
         return;
-      }
-
-      // ✅ NEW: Auto-rename chat on first message
-      if (isFirstMessage && typeof autoRenameChat === "function") {
-        await autoRenameChat(selectedChat._id, promptCopy);
       }
 
       const fullMessage = data?.data?.content || "";
@@ -137,6 +129,19 @@ const PromptBox = ({ setMessages, setIsLoading, isLoading, isEmptyState = false 
             };
           });
         }
+      }
+
+      // ✅ NEW: Auto-rename chat after receiving response
+      if (typeof autoRenameFromConversation === "function" && selectedChat) {
+        // Get the updated messages (including the new assistant response)
+        const updatedMessages = [...(selectedChat.messages || []), userPrompt];
+        updatedMessages.push({
+          role: "assistant",
+          content: fullMessage,
+          timestamp: Date.now(),
+        });
+        
+        await autoRenameFromConversation(selectedChat._id, updatedMessages);
       }
     } catch (error) {
       console.error("API ERROR:", error);
